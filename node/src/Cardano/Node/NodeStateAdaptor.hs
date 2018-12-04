@@ -32,7 +32,6 @@ module Cardano.Node.NodeStateAdaptor (
   , getNtpDrift
   , getCreationTimestamp
     -- * Non-mockable
-  , filterUtxo
   , mostRecentMainBlock
   , triggerShutdown
   , waitForUpdate
@@ -51,18 +50,10 @@ import           Control.Lens (lens, to)
 import           Control.Monad.IO.Unlift (MonadUnliftIO, UnliftIO (UnliftIO),
                      askUnliftIO, unliftIO, withUnliftIO)
 import           Control.Monad.STM (orElse, retry)
-import           Data.Conduit (mapOutputMaybe, runConduitRes, (.|))
-import qualified Data.Conduit.List as Conduit
-import           Data.SafeCopy (base, deriveSafeCopy)
 import           Data.Time.Units (Millisecond, fromMicroseconds, toMicroseconds)
-import           Formatting (bprint, build, sformat, shown, (%))
-import qualified Formatting.Buildable
 import           Ntp.Client (NtpStatus (..))
 import           Ntp.Packet (NtpOffset)
-import           Serokell.Data.Memory.Units (Byte)
 
-import qualified Cardano.Wallet.API.V1.Types as V1
-import           Cardano.Wallet.Kernel.Util.Core as Util
 import           Pos.Chain.Block (Block, HeaderHash, LastKnownHeader,
                      LastKnownHeaderTag, MainBlock, blockHeader, headerHash,
                      mainBlockSlot, prevBlockL)
@@ -105,7 +96,6 @@ import           Test.Pos.Configuration (withDefConfiguration,
 
 newtype SecurityParameter = SecurityParameter Int
 
-deriveSafeCopy 1 'base ''SecurityParameter
 
 -- | Returned by 'getSlotStart' when requesting info about an unknown epoch
 data UnknownEpoch = UnknownEpoch SlotId
@@ -467,10 +457,6 @@ defaultGetCreationTimestamp = liftIO $ Util.getCurrentTimestamp
   Non-mockable functions
 -------------------------------------------------------------------------------}
 
-filterUtxo :: (NodeConstraints, MonadCatch m, MonadUnliftIO m)
-           => ((TxIn, TxOutAux) -> Maybe a) -> WithNodeState m [a]
-filterUtxo p = runConduitRes $ mapOutputMaybe p utxoSource
-                            .| Conduit.fold (flip (:)) []
 
 triggerShutdown :: MonadIO m => WithNodeState m ()
 triggerShutdown = Shutdown.triggerShutdown
