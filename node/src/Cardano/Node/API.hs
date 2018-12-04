@@ -193,9 +193,8 @@ handlers
     -> CompileTimeInfo
     -> ServerT Node.API Handler
 handlers d t s n l ts sv uc ci =
-    getNodeSettings ci uc ts sv
+     getProtocolParameters
     :<|> getNodeInfo d t s n l
-    :<|> getProtocolParameters
     :<|> applyUpdate
     :<|> postponeUpdate
 
@@ -235,14 +234,23 @@ instance Core.HasSlottingVar SettingsCtx where
 
 
 getProtocolParameters
-    :: ForceNtpCheck
-    -> Handler (WalletResponse Node.ProtocolParameters)
-getProtocolParameters _ =
-    throwError err500 { errBody = "This handler is not yet implemented." }
+    :: Handler (WalletResponse Node.NodeInfo)
+getProtocolParameters = do
+    liftIO $ putStrLn ("hello" :: String)
+    pure $ liftIO $ generate $ arbitrary
+    where
+        run :: forall a.
+               (    NodeConstraints
+                 => Lock (WithNodeState m)
+                 -> WithNodeState m a
+               )
+            -> m a
+        run act = runReaderT (unwrap $ act withLock) (Res nr)
+
 
 applyUpdate :: Handler NoContent
-applyUpdate =
-    throwError err500 { errBody = "This handler is not yet implemented." }
+applyUpdate = pure NoContent
+--throwError err500 { errBody = "This handler is not yet implemented." }
 
 {-
 

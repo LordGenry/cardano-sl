@@ -55,6 +55,7 @@ library
                        Cardano.Node.API.Swagger
                        Cardano.Node.Client
                        Cardano.Node.Manager
+                       Cardano.Node.NodeStateAdaptor
 
   other-modules:       Paths_cardano_sl_node
 

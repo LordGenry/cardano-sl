@@ -606,7 +606,7 @@ type SettingsAPI =
 
 type InfoAPI =
         Tags '["Info"]
-            :> "node-info"
+            :> "node-info-"
             :> Summary "Retrieves the dynamic information for this node."
             :> CustomQueryFlag "force_ntp_check" ForceNtpCheck
             :> Get '[ValidJSON] (APIResponse NodeInfo)
@@ -616,20 +616,17 @@ instance HasCustomQueryFlagDescription "force_ntp_check" where
 
 
 type ProtocolParametersAPI =
-        Tags '["Info"]
-            :> "protocol-parameters"
+            "protocol-parameters"
             :> Summary "Retrieves epoch-specific protocol parametes for this node."
-            :> CustomQueryFlag "force_ntp_check" ForceNtpCheck
-            :> Get '[ValidJSON] (WalletResponse ProtocolParameters)
+            :> Get '[ValidJSON] (WalletResponse NodeSettings)
 
 -- The API definition is down here for now due to TH staging restrictions. Will
 -- relocate other stuff into it's own module when the extraction is complete.
 type API =
-        SettingsAPI
+
+        ProtocolParametersAPI
     :<|>
         InfoAPI
-    :<|>
-        ProtocolParametersAPI
     :<|>
         "update"
             :> ( "apply"
