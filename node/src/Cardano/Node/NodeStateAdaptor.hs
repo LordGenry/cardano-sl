@@ -47,8 +47,6 @@ module Cardano.Node.NodeStateAdaptor (
 import           Universum
 
 import           Control.Lens (lens, to)
-import           Control.Monad.IO.Unlift (MonadUnliftIO, UnliftIO (UnliftIO),
-                     askUnliftIO, unliftIO, withUnliftIO)
 import           Control.Monad.STM (orElse, retry)
 import           Data.Time.Units (Millisecond, fromMicroseconds, toMicroseconds)
 import           Ntp.Client (NtpStatus (..))
@@ -331,9 +329,6 @@ instance HasShutdownContext Res where
   will make sure that this is in scope.
 -------------------------------------------------------------------------------}
 
-instance MonadUnliftIO m => MonadUnliftIO (WithNodeState m) where
-  askUnliftIO = Wrap $ withUnliftIO $ \u ->
-                  pure $ UnliftIO (unliftIO u . unwrap)
 
 instance ( NodeConstraints
          , MonadThrow m
@@ -659,17 +654,7 @@ defMockNodeStateParams =
     getSomeTimestamp = Timestamp $ fromMicroseconds 12340000
 
     notDefined :: Text -> a
-    notDefined = error
-              . sformat ("defMockNodeStateParams: '" % build % "' not defined")
+    notDefined = error "defMockNodeStateParams: (? FIXME) not defined"
+    --error
+    --          . sformat ("defMockNodeStateParams: '" % build % "' not defined")
 
-{-------------------------------------------------------------------------------
-  Pretty-printing
--------------------------------------------------------------------------------}
-
-instance Buildable MissingBlock where
-  build (MissingBlock cs hash) =
-    bprint ("MissingBlock " % build % " at " % shown) hash (prettyCallStack cs)
-
-instance Buildable UnknownEpoch where
-  build (UnknownEpoch slotId) =
-    bprint ("UnknownEpoch " % build) slotId
