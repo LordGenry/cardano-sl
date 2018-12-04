@@ -593,17 +593,10 @@ instance BuildableSafeGen NodeSettings where
 
 data ProtocolParameters = ProtocolParameters
     { slotId :: SlotId
-    }
+    } deriving (Generic)
 
--- TODO: Child members of ProtocolParameters are using TH to derive JSON,
--- writing this top level manually is likely of little use.
-instance ToJSON ProtocolParameters where
-    toJSON (ProtocolParameters slotId) =
-        object [ "slotId" .= toJSON slotId
-               ]
-
-instance FromJSON ProtocolParameters where
-    parseJSON = withObject "ProtocolParameters" $ \sl -> ProtocolParameters <$> sl .: "slotId"
+instance ToJSON ProtocolParameters
+instance FromJSON ProtocolParameters
 
 type SettingsAPI =
     Tags '["Settings"]
