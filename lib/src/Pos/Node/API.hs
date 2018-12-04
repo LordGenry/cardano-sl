@@ -42,8 +42,9 @@ import           Pos.Infra.Diffusion.Subscription.Status
 import           Pos.Infra.Util.LogSafe (BuildableSafeGen (..), SecureLog (..),
                      deriveSafeBuildable)
 import           Pos.Util.Example
-import           Pos.Util.Servant (APIResponse, CustomQueryFlag, Flaggable (..),
+import           Pos.Util.Servant (APIResponse, CustomQueryFlag,
                      HasCustomQueryFlagDescription (..), Tags, ValidJSON)
+import           Pos.Core.Slotting ( SlotId (..))
 import           Pos.Util.UnitsOfMeasure
 import           Serokell.Util.Text
 
@@ -281,6 +282,7 @@ data NodeInfo = NodeInfo {
    , nfoLocalTimeInformation  :: !TimeInfo
    , nfoSubscriptionStatus    :: Map NodeId SubscriptionStatus
    } deriving (Show, Eq, Generic)
+
 
 deriveJSON Aeson.defaultOptions ''NodeInfo
 
@@ -589,6 +591,19 @@ instance BuildableSafeGen NodeSettings where
         setProjectVersion
         setGitRevision
 
+data ProtocolParameters = ProtocolParameters
+    { slotId :: SlotId
+    }
+
+-- TODO: Child members of ProtocolParameters are using TH to derive JSON,
+-- writing this top level manually is likely of little use.
+instance ToJSON ProtocolParameters where
+    toJSON (ProtocolParameters slotId) =
+        object [ "slotId" .= toJSON slotId
+               ]
+
+instance FromJSON ProtocolParameters where
+    parseJSON = withObject "ProtocolParameters" $ \sl -> ProtocolParameters <$> sl .: "slotId"
 
 type SettingsAPI =
     Tags '["Settings"]
@@ -606,12 +621,22 @@ type InfoAPI =
 instance HasCustomQueryFlagDescription "force_ntp_check" where
     customDescription _ = Just forceNtpCheckDescription
 
+
+type ProtocolParametersAPI =
+        Tags '["Info"]
+            :> "protocol-parameters"
+            :> Summary "Retrieves epoch-specific protocol parametes for this node."
+            :> CustomQueryFlag "force_ntp_check" ForceNtpCheck
+            :> Get '[ValidJSON] (WalletResponse ProtocolParameters)
+
 -- The API definition is down here for now due to TH staging restrictions. Will
 -- relocate other stuff into it's own module when the extraction is complete.
 type API =
         SettingsAPI
     :<|>
         InfoAPI
+    :<|>
+        ProtocolParametersAPI
     :<|>
         "update"
             :> ( "apply"

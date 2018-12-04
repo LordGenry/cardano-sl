@@ -195,6 +195,7 @@ handlers
 handlers d t s n l ts sv uc ci =
     getNodeSettings ci uc ts sv
     :<|> getNodeInfo d t s n l
+    :<|> getProtocolParameters
     :<|> applyUpdate
     :<|> postponeUpdate
 
@@ -231,6 +232,13 @@ instance Core.HasSlottingVar SettingsCtx where
         lens settingsCtxTimestamp (\s t -> s { settingsCtxTimestamp = t })
     slottingVar =
         lens settingsCtxSlottingVar (\s t -> s { settingsCtxSlottingVar = t })
+
+
+getProtocolParameters
+    :: ForceNtpCheck
+    -> Handler (WalletResponse Node.ProtocolParameters)
+getProtocolParameters _ =
+    throwError err500 { errBody = "This handler is not yet implemented." }
 
 applyUpdate :: Handler NoContent
 applyUpdate =
