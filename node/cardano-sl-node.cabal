@@ -36,6 +36,7 @@ library
                      , http-media
                      , http-types
                      , lens
+                     , serokell-util
                      , servant-client
                      , servant-server
                      , servant-swagger

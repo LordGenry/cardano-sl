@@ -29,7 +29,6 @@ module Cardano.Node.NodeStateAdaptor (
   , getNodeSyncProgress
   , curSoftwareVersion
   , compileInfo
-  , getNtpDrift
   , getCreationTimestamp
     -- * Non-mockable
   , mostRecentMainBlock
@@ -51,6 +50,7 @@ import           Control.Monad.STM (orElse, retry)
 import           Data.Time.Units (Millisecond, fromMicroseconds, toMicroseconds)
 import           Ntp.Client (NtpStatus (..))
 import           Ntp.Packet (NtpOffset)
+import           Serokell.Data.Memory.Units (Byte)
 
 import           Pos.Chain.Block (Block, HeaderHash, LastKnownHeader,
                      LastKnownHeaderTag, MainBlock, blockHeader, headerHash,
@@ -272,9 +272,6 @@ data NodeStateAdaptor m = Adaptor {
       -- | Git revision
     , compileInfo :: m CompileTimeInfo
 
-      -- | Ask the NTP client for the status
-    , getNtpDrift :: V1.ForceNtpCheck -> m V1.TimeInfo
-
       -- | Get the current timestamp
       --
       -- Tests can mock transaction creation time with this function.
@@ -373,8 +370,6 @@ newNodeStateAdaptor genesisConfig nr ntpStatus = Adaptor
     , getCoreConfig            = return genesisConfig
     , curSoftwareVersion       = return $ Upd.curSoftwareVersion Upd.updateConfiguration
     , compileInfo              = return $ Util.compileInfo
-    , getNtpDrift              = defaultGetNtpDrift ntpStatus
-    , getCreationTimestamp     =             run $ \_lock -> defaultGetCreationTimestamp
     }
   where
     genesisHash = configGenesisHash genesisConfig
@@ -445,9 +440,6 @@ defaultSyncProgress lockContext lock = do
              )
     return (max localHeight <$> globalHeight, localHeight)
 
-defaultGetCreationTimestamp :: MonadIO m => WithNodeState m Timestamp
-defaultGetCreationTimestamp = liftIO $ Util.getCurrentTimestamp
-
 {-------------------------------------------------------------------------------
   Non-mockable functions
 -------------------------------------------------------------------------------}
@@ -467,34 +459,6 @@ waitForUpdate = liftIO . takeMVar =<< asks l
     l :: Res -> MVar ConfirmedProposalState
     l = ucDownloadedUpdate . view lensOf'
 
-
--- | Get the difference between NTP time and local system time, nothing if the
--- NTP server couldn't be reached in the last 30min.
---
--- Note that one can force a new query to the NTP server in which case, it may
--- take up to 30s to resolve.
-defaultGetNtpDrift
-    :: MonadIO m
-    => TVar NtpStatus
-    -> V1.ForceNtpCheck
-    -> m V1.TimeInfo
-defaultGetNtpDrift tvar ntpCheckBehavior = liftIO $ mkTimeInfo <$>
-    if (ntpCheckBehavior == V1.ForceNtpCheck) then
-        forceNtpCheck >> getNtpOffset blockingLookupNtpOffset
-    else
-        getNtpOffset nonBlockingLookupNtpOffset
-  where
-    forceNtpCheck :: MonadIO m => m ()
-    forceNtpCheck =
-        atomically $ writeTVar tvar NtpSyncPending
-
-    getNtpOffset :: MonadIO m => (NtpStatus -> STM (Maybe NtpOffset)) -> m (Maybe NtpOffset)
-    getNtpOffset lookupNtpOffset =
-        atomically $ (readTVar tvar >>= lookupNtpOffset)
-
-    mkTimeInfo :: Maybe NtpOffset -> V1.TimeInfo
-    mkTimeInfo =
-        V1.TimeInfo . fmap (V1.mkLocalTimeDifference . toMicroseconds)
 
 
 -- Lookup NtpOffset from an NTPStatus in a non-blocking manner
@@ -590,7 +554,6 @@ mockNodeState MockNodeStateParams{..} =
         , getCoreConfig            = return genesisConfig
         , curSoftwareVersion       = return $ Upd.curSoftwareVersion Upd.updateConfiguration
         , compileInfo              = return $ Util.compileInfo
-        , getNtpDrift              = return . mockNodeStateNtpDrift
         , getCreationTimestamp     = return $ mockNodeStateCreationTimestamp
         }
 
@@ -618,9 +581,6 @@ data MockNodeStateParams = NodeConstraints => MockNodeStateParams {
         -- | Value for 'getNodeSyncProgress'
       , mockNodeStateSyncProgress :: (Maybe BlockCount, BlockCount)
 
-        -- | Value for 'getNtpDrift'
-      , mockNodeStateNtpDrift :: V1.ForceNtpCheck -> V1.TimeInfo
-
         -- | Value for 'getCreationTimestamp'
       , mockNodeStateCreationTimestamp :: Timestamp
       }
@@ -646,7 +606,6 @@ defMockNodeStateParams =
         , mockNodeStateNextEpochSlotDuration = notDefined "mockNodeStateNextEpochSlotDuration"
         , mockNodeStateSyncProgress          = notDefined "mockNodeStateSyncProgress"
         , mockNodeStateSecurityParameter     = SecurityParameter 2160
-        , mockNodeStateNtpDrift              = const (V1.TimeInfo Nothing)
         , mockNodeStateCreationTimestamp     = getSomeTimestamp
         }
   where

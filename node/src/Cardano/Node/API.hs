@@ -193,8 +193,9 @@ handlers
     -> CompileTimeInfo
     -> ServerT Node.API Handler
 handlers d t s n l ts sv uc ci =
-     getProtocolParameters
+    getNodeSettings ci uc ts sv
     :<|> getNodeInfo d t s n l
+    :<|> getProtocolParameters
     :<|> applyUpdate
     :<|> postponeUpdate
 
@@ -234,18 +235,9 @@ instance Core.HasSlottingVar SettingsCtx where
 
 
 getProtocolParameters
-    :: Handler (WalletResponse Node.NodeInfo)
+    :: Handler (WalletResponse Node.ProtocolParameters)
 getProtocolParameters = do
-    liftIO $ putStrLn ("hello" :: String)
-    pure $ liftIO $ generate $ arbitrary
-    where
-        run :: forall a.
-               (    NodeConstraints
-                 => Lock (WithNodeState m)
-                 -> WithNodeState m a
-               )
-            -> m a
-        run act = runReaderT (unwrap $ act withLock) (Res nr)
+    pure $ error "hi"
 
 
 applyUpdate :: Handler NoContent

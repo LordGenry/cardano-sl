@@ -37,6 +37,7 @@ import           Text.ParserCombinators.ReadP (readP_to_S)
 
 import qualified Pos.Chain.Update as Core
 import qualified Pos.Core as Core
+import           Pos.Core.Slotting (SlotId (..))
 import           Pos.Infra.Diffusion.Subscription.Status
                      (SubscriptionStatus (..))
 import           Pos.Infra.Util.LogSafe (BuildableSafeGen (..), SecureLog (..),
@@ -616,17 +617,19 @@ instance HasCustomQueryFlagDescription "force_ntp_check" where
 
 
 type ProtocolParametersAPI =
-            "protocol-parameters"
+        Tags '["ProtocolParameters"]
+            :> "protocol-parameters"
             :> Summary "Retrieves epoch-specific protocol parametes for this node."
-            :> Get '[ValidJSON] (WalletResponse NodeSettings)
+            :> Get '[ValidJSON] (WalletResponse ProtocolParameters)
 
 -- The API definition is down here for now due to TH staging restrictions. Will
 -- relocate other stuff into it's own module when the extraction is complete.
 type API =
-
-        ProtocolParametersAPI
+        SettingsAPI
     :<|>
         InfoAPI
+    :<|>
+        ProtocolParametersAPI
     :<|>
         "update"
             :> ( "apply"
