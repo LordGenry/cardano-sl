@@ -169,7 +169,10 @@ data Config = Config
     , configGenesisData       :: GenesisData
     , configGenesisHash       :: GenesisHash
     }
-
+{-
+-- Ehrm, is this a good idea? Are we exposing anything secret here?
+instance ToJSON Config
+-}
 configK :: Config -> Int
 configK = pcK . configProtocolConstants
 

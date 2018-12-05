@@ -1,7 +1,8 @@
-{-# LANGUAGE CPP             #-}
-{-# LANGUAGE DataKinds       #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeOperators   #-}
+{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE TypeOperators              #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Pos.Node.API where
@@ -31,13 +32,14 @@ import           GHC.Generics (Generic, Rep)
 import qualified Network.Transport as NT
 import           Node (NodeId (..))
 import qualified Prelude
+import           Serokell.Data.Memory.Units (Byte)
 import           Servant
 import           Test.QuickCheck
 import           Text.ParserCombinators.ReadP (readP_to_S)
 
+--import qualified Pos.Chain.Genesis as Genesis
 import qualified Pos.Chain.Update as Core
 import qualified Pos.Core as Core
-import           Pos.Core.Slotting (SlotId (..))
 import           Pos.Infra.Diffusion.Subscription.Status
                      (SubscriptionStatus (..))
 import           Pos.Infra.Util.LogSafe (BuildableSafeGen (..), SecureLog (..),
@@ -592,12 +594,21 @@ instance BuildableSafeGen NodeSettings where
         setProjectVersion
         setGitRevision
 
+
+newtype SecurityParameter = SecurityParameter Int
+    deriving (Generic, ToJSON)
+
 data ProtocolParameters = ProtocolParameters
-    { slotId :: SlotId
+    { slotId            :: Core.SlotId
+    , maxTxSize         :: Byte
+    , feePolicy         :: Core.TxFeePolicy
+    , securityParameter :: SecurityParameter
+    , slotCount         :: Core.SlotCount
+    --, coreConfig        :: Genesis.Config
     } deriving (Generic)
 
+
 instance ToJSON ProtocolParameters
-instance FromJSON ProtocolParameters
 
 type SettingsAPI =
     Tags '["Settings"]

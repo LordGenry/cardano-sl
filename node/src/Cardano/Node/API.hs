@@ -28,7 +28,6 @@ import qualified Pos.Chain.Genesis as Genesis
 import           Pos.Chain.Ssc (SscContext)
 import           Pos.Chain.Update (UpdateConfiguration, curSoftwareVersion,
                      withUpdateConfiguration)
-import qualified Pos.Client.CLI as CLI
 import           Pos.Client.CLI.NodeOptions (NodeApiArgs (..))
 import           Pos.Context (HasPrimaryKey (..), HasSscContext (..),
                      NodeContext (..))
@@ -44,7 +43,6 @@ import           Pos.DB.Txp.MemState (GenericTxpLocalData, TxpHolderTag)
 import           Pos.Infra.Diffusion.Subscription.Status (ssMap)
 import           Pos.Infra.Diffusion.Types (Diffusion (..))
 import qualified Pos.Infra.Slotting.Util as Slotting
-import           Pos.Launcher.Configuration (withConfigurations)
 import           Pos.Launcher.Resource (NodeResources (..))
 import           Pos.Node.API as Node
 import           Pos.Util (HasLens (..), HasLens')
@@ -153,8 +151,8 @@ launchNodeServer
                 slottingVar
                 updateConfiguration
                 compileTimeInfo
-				genesisConfig
-				nodeResources
+                genesisConfig
+                nodeResources
             :<|> legacyApi
 
     concurrently_
@@ -207,7 +205,7 @@ handlers
 handlers d t s n l ts sv uc ci gc nr =
     getNodeSettings ci uc ts sv
     :<|> getNodeInfo d t s n l
-    :<|> getProtocolParameters gc t nr uc ci
+    :<|> getProtocolParameters gc nr uc
     :<|> applyUpdate
     :<|> postponeUpdate
 
@@ -248,19 +246,21 @@ instance Core.HasSlottingVar SettingsCtx where
 
 getProtocolParameters
     :: Genesis.Config
-    -> TVar NtpStatus
     -> NodeResources ()
     -> UpdateConfiguration
-    -> CompileTimeInfo
     -> Handler (WalletResponse Node.ProtocolParameters)
-getProtocolParameters genesisConfig ntpStatus nodeRes uc ci = do
-    pure $ error "hi"
+getProtocolParameters genesisConfig nodeRes uc = do
+    sid <- liftIO $ NodeStateAdaptor.getTipSlotId nodeState
+    mts <- liftIO $ NodeStateAdaptor.getMaxTxSize nodeState
+    fp  <- liftIO $ NodeStateAdaptor.getFeePolicy nodeState
+    scp <- liftIO $ NodeStateAdaptor.getSecurityParameter nodeState
+    sc  <- liftIO $ NodeStateAdaptor.getSlotCount nodeState
+    pure $ single $ ProtocolParameters sid mts fp scp sc
     where
       nodeState :: NodeStateAdaptor.NodeStateAdaptor IO
       nodeState = withUpdateConfiguration uc $ withCompileInfo $ NodeStateAdaptor.newNodeStateAdaptor
           genesisConfig
           nodeRes
-          ntpStatus
 
 
 applyUpdate :: Handler NoContent

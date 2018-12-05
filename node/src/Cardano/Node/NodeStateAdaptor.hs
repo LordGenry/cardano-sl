@@ -29,7 +29,6 @@ module Cardano.Node.NodeStateAdaptor (
   , getNodeSyncProgress
   , curSoftwareVersion
   , compileInfo
-  , getCreationTimestamp
     -- * Non-mockable
   , mostRecentMainBlock
   , triggerShutdown
@@ -46,10 +45,8 @@ module Cardano.Node.NodeStateAdaptor (
 import           Universum
 
 import           Control.Lens (lens, to)
-import           Control.Monad.STM (orElse, retry)
-import           Data.Time.Units (Millisecond, fromMicroseconds, toMicroseconds)
-import           Ntp.Client (NtpStatus (..))
-import           Ntp.Packet (NtpOffset)
+import           Control.Monad.STM (orElse)
+import           Data.Time.Units (Millisecond)
 import           Serokell.Data.Memory.Units (Byte)
 
 import           Pos.Chain.Block (Block, HeaderHash, LastKnownHeader,
@@ -57,7 +54,6 @@ import           Pos.Chain.Block (Block, HeaderHash, LastKnownHeader,
                      mainBlockSlot, prevBlockL)
 import           Pos.Chain.Genesis as Genesis (Config (..), GenesisHash (..),
                      configBlockVersionData, configEpochSlots, configK)
-import           Pos.Chain.Txp (TxIn, TxOutAux)
 import           Pos.Chain.Update (ConfirmedProposalState,
                      HasUpdateConfiguration, SoftwareVersion, bvdMaxTxSize,
                      bvdTxFeePolicy)
@@ -72,7 +68,6 @@ import           Pos.DB.BlockIndex (getTipHeader)
 import           Pos.DB.Class (MonadDBRead (..), getBlock)
 import           Pos.DB.GState.Lock (StateLock, withStateLockNoMetrics)
 import           Pos.DB.Rocks (NodeDBs, dbGetDefault, dbIterSourceDefault)
-import           Pos.DB.Txp.Utxo (utxoSource)
 import           Pos.DB.Update (UpdateContext, getAdoptedBVData,
                      ucDownloadedUpdate)
 import           Pos.Infra.Shutdown.Class (HasShutdownContext (..))
@@ -80,6 +75,7 @@ import qualified Pos.Infra.Shutdown.Logic as Shutdown
 import qualified Pos.Infra.Slotting.Impl.Simple as S
 import qualified Pos.Infra.Slotting.Util as Slotting
 import           Pos.Launcher.Resource (NodeResources (..))
+import           Pos.Node.API (SecurityParameter (..))
 import           Pos.Util (CompileTimeInfo, HasCompileInfo, HasLens (..),
                      lensOf', withCompileInfo)
 import qualified Pos.Util as Util
@@ -92,7 +88,6 @@ import           Test.Pos.Configuration (withDefConfiguration,
   Additional types
 -------------------------------------------------------------------------------}
 
-newtype SecurityParameter = SecurityParameter Int
 
 
 -- | Returned by 'getSlotStart' when requesting info about an unknown epoch
@@ -272,10 +267,6 @@ data NodeStateAdaptor m = Adaptor {
       -- | Git revision
     , compileInfo :: m CompileTimeInfo
 
-      -- | Get the current timestamp
-      --
-      -- Tests can mock transaction creation time with this function.
-    , getCreationTimestamp :: m Timestamp
     }
 
 {-------------------------------------------------------------------------------
@@ -355,9 +346,8 @@ instance MonadIO m => MonadSlots Res (WithNodeState m) where
 newNodeStateAdaptor :: forall m ext. (NodeConstraints, MonadIO m, MonadMask m)
                     => Config
                     -> NodeResources ext
-                    -> TVar NtpStatus
                     -> NodeStateAdaptor m
-newNodeStateAdaptor genesisConfig nr ntpStatus = Adaptor
+newNodeStateAdaptor genesisConfig nr = Adaptor
     { withNodeState            =            run
     , getTipSlotId             =            run $ \_lock -> defaultGetTipSlotId genesisHash
     , getMaxTxSize             =            run $ \_lock -> defaultGetMaxTxSize
@@ -460,32 +450,6 @@ waitForUpdate = liftIO . takeMVar =<< asks l
     l = ucDownloadedUpdate . view lensOf'
 
 
-
--- Lookup NtpOffset from an NTPStatus in a non-blocking manner
---
--- i.e. Returns immediately with 'Nothing' if the NtpSync is pending.
-nonBlockingLookupNtpOffset
-    :: NtpStatus
-    -> STM (Maybe NtpOffset)
-nonBlockingLookupNtpOffset = \case
-    NtpSyncPending     -> pure Nothing
-    NtpDrift offset    -> pure (Just offset)
-    NtpSyncUnavailable -> pure Nothing
-
-
--- Lookup NtpOffset from an NTPStatus in a blocking manner, this usually
--- take ~100ms
---
--- i.e. Wait (at most 30s) for the NtpSync to resolve if pending
-blockingLookupNtpOffset
-    :: NtpStatus
-    -> STM (Maybe NtpOffset)
-blockingLookupNtpOffset = \case
-    NtpSyncPending     -> retry
-    NtpDrift offset    -> pure (Just offset)
-    NtpSyncUnavailable -> pure Nothing
-
-
 -- | Get the most recent main block starting at the specified header
 --
 -- Returns nothing if there are no (regular) blocks on the blockchain yet.
@@ -554,7 +518,6 @@ mockNodeState MockNodeStateParams{..} =
         , getCoreConfig            = return genesisConfig
         , curSoftwareVersion       = return $ Upd.curSoftwareVersion Upd.updateConfiguration
         , compileInfo              = return $ Util.compileInfo
-        , getCreationTimestamp     = return $ mockNodeStateCreationTimestamp
         }
 
 -- | Variation on 'mockNodeState' that uses the default params
@@ -581,8 +544,6 @@ data MockNodeStateParams = NodeConstraints => MockNodeStateParams {
         -- | Value for 'getNodeSyncProgress'
       , mockNodeStateSyncProgress :: (Maybe BlockCount, BlockCount)
 
-        -- | Value for 'getCreationTimestamp'
-      , mockNodeStateCreationTimestamp :: Timestamp
       }
 
 -- | Default 'MockNodeStateParams'
@@ -606,12 +567,8 @@ defMockNodeStateParams =
         , mockNodeStateNextEpochSlotDuration = notDefined "mockNodeStateNextEpochSlotDuration"
         , mockNodeStateSyncProgress          = notDefined "mockNodeStateSyncProgress"
         , mockNodeStateSecurityParameter     = SecurityParameter 2160
-        , mockNodeStateCreationTimestamp     = getSomeTimestamp
         }
   where
-    getSomeTimestamp :: Timestamp
-    getSomeTimestamp = Timestamp $ fromMicroseconds 12340000
-
     notDefined :: Text -> a
     notDefined = error "defMockNodeStateParams: (? FIXME) not defined"
     --error
