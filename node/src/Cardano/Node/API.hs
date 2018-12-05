@@ -267,8 +267,8 @@ getProtocolParameters genesisConfig nodeRes uc = do
 
 
 applyUpdate :: Handler NoContent
-applyUpdate = pure NoContent
---throwError err500 { errBody = "This handler is not yet implemented." }
+applyUpdate =
+    throwError err500 { errBody = "This handler is not yet implemented." }
 
 {-
 

@@ -286,7 +286,6 @@ data NodeInfo = NodeInfo {
    , nfoSubscriptionStatus    :: Map NodeId SubscriptionStatus
    } deriving (Show, Eq, Generic)
 
-
 deriveJSON Aeson.defaultOptions ''NodeInfo
 
 instance ToSchema NodeInfo where
@@ -609,6 +608,7 @@ data ProtocolParameters = ProtocolParameters
 
 
 instance ToJSON ProtocolParameters
+instance ToJSON ProtocolParameters
 
 type SettingsAPI =
     Tags '["Settings"]
@@ -618,7 +618,7 @@ type SettingsAPI =
 
 type InfoAPI =
         Tags '["Info"]
-            :> "node-info-"
+            :> "node-info"
             :> Summary "Retrieves the dynamic information for this node."
             :> CustomQueryFlag "force_ntp_check" ForceNtpCheck
             :> Get '[ValidJSON] (APIResponse NodeInfo)
