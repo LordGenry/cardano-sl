@@ -24,6 +24,6 @@ main = withCompileInfo $ do
                     nodeResources
                     updateConfiguration
                     compileInfo
-					genConfig)
+                    genConfig)
                 genConfig walConfig txpConfig
                 ntpConfig nodeParams sscParams nodeResources
