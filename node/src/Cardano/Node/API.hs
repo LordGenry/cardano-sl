@@ -19,12 +19,15 @@ import           Network.Wai.Handler.Warp (defaultSettings,
 import qualified Paths_cardano_sl_node as Paths
 import           Servant
 
+import qualified Cardano.Node.NodeStateAdaptor as NodeStateAdaptor
 import           Ntp.Client (NtpConfiguration, NtpStatus (..),
                      ntpClientSettings, withNtpClient)
 import           Ntp.Packet (NtpOffset)
 import           Pos.Chain.Block (LastKnownHeader, LastKnownHeaderTag)
+import qualified Pos.Chain.Genesis as Genesis
 import           Pos.Chain.Ssc (SscContext)
 import           Pos.Chain.Update (UpdateConfiguration, curSoftwareVersion)
+import qualified Pos.Client.CLI as CLI
 import           Pos.Client.CLI.NodeOptions (NodeApiArgs (..))
 import           Pos.Context (HasPrimaryKey (..), HasSscContext (..),
                      NodeContext (..))
@@ -40,6 +43,7 @@ import           Pos.DB.Txp.MemState (GenericTxpLocalData, TxpHolderTag)
 import           Pos.Infra.Diffusion.Subscription.Status (ssMap)
 import           Pos.Infra.Diffusion.Types (Diffusion (..))
 import qualified Pos.Infra.Slotting.Util as Slotting
+import           Pos.Launcher.Configuration (withConfigurations)
 import           Pos.Launcher.Resource (NodeResources (..))
 import           Pos.Node.API as Node
 import           Pos.Util (HasLens (..), HasLens')
@@ -112,6 +116,7 @@ launchNodeServer
     -> UpdateConfiguration
     -> CompileTimeInfo
     -> Diffusion IO
+	-> Genesis.Config
     -> IO ()
 launchNodeServer
     params
@@ -120,6 +125,7 @@ launchNodeServer
     updateConfiguration
     compileTimeInfo
     diffusion
+	genesisConfig
   = do
     ntpStatus <- withNtpClient (ntpClientSettings ntpConfig)
     let legacyApi = legacyNodeApi LegacyCtx
@@ -145,6 +151,7 @@ launchNodeServer
                 slottingVar
                 updateConfiguration
                 compileTimeInfo
+				genesisConfig
             :<|> legacyApi
 
     concurrently_
@@ -191,11 +198,12 @@ handlers
     -> Core.SlottingVar
     -> UpdateConfiguration
     -> CompileTimeInfo
+    -> Genesis.Config
     -> ServerT Node.API Handler
-handlers d t s n l ts sv uc ci =
+handlers d t s n l ts sv uc ci gc =
     getNodeSettings ci uc ts sv
     :<|> getNodeInfo d t s n l
-    :<|> getProtocolParameters
+    :<|> getProtocolParameters gc t
     :<|> applyUpdate
     :<|> postponeUpdate
 
@@ -235,8 +243,14 @@ instance Core.HasSlottingVar SettingsCtx where
 
 
 getProtocolParameters
-    :: Handler (WalletResponse Node.ProtocolParameters)
-getProtocolParameters = do
+    :: Genesis.Config
+    -> TVar NtpStatus
+    -> Handler (WalletResponse Node.ProtocolParameters)
+getProtocolParameters genesisConfig ntpStatus = do
+    let nodeState = NodeStateAdaptor.newNodeStateAdaptor
+            genesisConfig
+            nodeRes
+            ntpStatus
     pure $ error "hi"
 
 
