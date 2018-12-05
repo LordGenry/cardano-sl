@@ -19,6 +19,8 @@ import           Network.Wai.Handler.Warp (defaultSettings,
 import qualified Paths_cardano_sl_node as Paths
 import           Servant
 
+import           Cardano.Node.NodeStateAdaptor (getFeePolicy, getMaxTxSize,
+                     getSecurityParameter, getSlotCount, getTipSlotId)
 import qualified Cardano.Node.NodeStateAdaptor as NodeStateAdaptor
 import           Ntp.Client (NtpConfiguration, NtpStatus (..),
                      ntpClientSettings, withNtpClient)
@@ -250,15 +252,16 @@ getProtocolParameters
     -> UpdateConfiguration
     -> Handler (WalletResponse Node.ProtocolParameters)
 getProtocolParameters genesisConfig nodeRes uc = do
-    sid <- liftIO $ NodeStateAdaptor.getTipSlotId nodeState
-    mts <- liftIO $ NodeStateAdaptor.getMaxTxSize nodeState
-    fp  <- liftIO $ NodeStateAdaptor.getFeePolicy nodeState
-    scp <- liftIO $ NodeStateAdaptor.getSecurityParameter nodeState
-    sc  <- liftIO $ NodeStateAdaptor.getSlotCount nodeState
-    pure $ single $ ProtocolParameters sid mts fp scp sc
+    pp <- liftIO $ ProtocolParameters
+                <$> (getTipSlotId ns)
+                <*> (getMaxTxSize ns)
+                <*> (getFeePolicy ns)
+                <*> (getSecurityParameter ns)
+                <*> (getSlotCount ns)
+    pure $ single pp
     where
-      nodeState :: NodeStateAdaptor.NodeStateAdaptor IO
-      nodeState = withUpdateConfiguration uc $ withCompileInfo $ NodeStateAdaptor.newNodeStateAdaptor
+      ns :: NodeStateAdaptor.NodeStateAdaptor IO
+      ns = withUpdateConfiguration uc $ withCompileInfo $ NodeStateAdaptor.newNodeStateAdaptor
           genesisConfig
           nodeRes
 
