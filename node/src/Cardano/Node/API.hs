@@ -250,7 +250,7 @@ getProtocolParameters
     :: Genesis.Config
     -> NodeResources ()
     -> UpdateConfiguration
-    -> Handler (WalletResponse Node.ProtocolParameters)
+    -> Handler (APIResponse Node.ProtocolParameters)
 getProtocolParameters genesisConfig nodeRes uc = do
     pp <- liftIO $ ProtocolParameters
                 <$> (getTipSlotId ns)

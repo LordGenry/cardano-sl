@@ -46,8 +46,8 @@ import           Pos.Infra.Util.LogSafe (BuildableSafeGen (..), SecureLog (..),
                      deriveSafeBuildable)
 import           Pos.Util.Example
 import           Pos.Util.Servant (APIResponse, CustomQueryFlag,
-                     HasCustomQueryFlagDescription (..), Tags, ValidJSON)
-import           Pos.Core.Slotting ( SlotId (..))
+                     HasCustomQueryFlagDescription (..), Tags, ValidJSON,
+                     Flaggable (..))
 import           Pos.Util.UnitsOfMeasure
 import           Serokell.Util.Text
 
@@ -595,7 +595,7 @@ instance BuildableSafeGen NodeSettings where
 
 
 newtype SecurityParameter = SecurityParameter Int
-    deriving (Generic, ToJSON)
+    deriving (Generic, ToJSON, FromJSON)
 
 data ProtocolParameters = ProtocolParameters
     { slotId            :: Core.SlotId
@@ -608,7 +608,10 @@ data ProtocolParameters = ProtocolParameters
 
 
 instance ToJSON ProtocolParameters
-instance ToJSON ProtocolParameters
+instance FromJSON ProtocolParameters
+
+instance ToSchema ProtocolParameters where
+    declareNamedSchema = error "TODO"
 
 type SettingsAPI =
     Tags '["Settings"]
@@ -631,7 +634,7 @@ type ProtocolParametersAPI =
         Tags '["ProtocolParameters"]
             :> "protocol-parameters"
             :> Summary "Retrieves epoch-specific protocol parametes for this node."
-            :> Get '[ValidJSON] (WalletResponse ProtocolParameters)
+            :> Get '[ValidJSON] (APIResponse ProtocolParameters)
 
 -- The API definition is down here for now due to TH staging restrictions. Will
 -- relocate other stuff into it's own module when the extraction is complete.
