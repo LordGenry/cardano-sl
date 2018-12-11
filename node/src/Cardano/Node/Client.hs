@@ -26,7 +26,8 @@ import qualified Servant.Client as Servant
 
 import           Cardano.Node.API (nodeV1Api)
 import           Pos.Chain.Txp (Utxo)
-import           Pos.Node.API (ForceNtpCheck, NodeInfo, NodeSettings, ProtocolParameters)
+import           Pos.Node.API (ForceNtpCheck, NodeInfo, NodeSettings,
+                     ProtocolParameters)
 import           Pos.Util.Jsend (ResponseStatus (..))
 import           Pos.Util.Servant (APIResponse (..))
 import           Pos.Web.Types (CConfirmedProposalState)

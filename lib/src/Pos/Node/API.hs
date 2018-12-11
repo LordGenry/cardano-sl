@@ -45,9 +45,8 @@ import           Pos.Infra.Diffusion.Subscription.Status
 import           Pos.Infra.Util.LogSafe (BuildableSafeGen (..), SecureLog (..),
                      deriveSafeBuildable)
 import           Pos.Util.Example
-import           Pos.Util.Servant (APIResponse, CustomQueryFlag,
-                     HasCustomQueryFlagDescription (..), Tags, ValidJSON,
-                     Flaggable (..))
+import           Pos.Util.Servant (APIResponse, CustomQueryFlag, Flaggable (..),
+                     HasCustomQueryFlagDescription (..), Tags, ValidJSON)
 import           Pos.Util.UnitsOfMeasure
 import           Serokell.Util.Text
 
@@ -606,6 +605,20 @@ data ProtocolParameters = ProtocolParameters
     --, coreConfig        :: Genesis.Config
     } deriving (Generic)
 
+deriveSafeBuildable ''ProtocolParameters
+instance BuildableSafeGen ProtocolParameters where
+    buildSafeGen _ ProtocolParameters{..} = bprint ("{"
+        %" slotId="%build
+--        %" maxTxSize="%build
+        %" feePolicy="%build
+--        %" securityParameter="%build
+        %" slotCount="%build
+        %" }")
+        slotId
+--        maxTxSize
+        feePolicy
+--      securityParameter
+        slotCount
 
 instance ToJSON ProtocolParameters
 instance FromJSON ProtocolParameters
