@@ -13599,6 +13599,7 @@ canonical-json
 cardano-sl-binary
 cardano-sl-binary-test
 cardano-sl-chain
+cardano-sl-chain-test
 cardano-sl-core
 cardano-sl-crypto
 cardano-sl-crypto-test
@@ -14282,6 +14283,7 @@ cardano-sl-core-test
 cardano-sl-crypto
 cardano-sl-crypto-test
 cardano-sl-util-test
+containers
 criterion
 data-default
 deepseq
@@ -16876,7 +16878,6 @@ license = stdenv.lib.licenses.mit;
   mkDerivation
 , acid-state
 , aeson
-, aeson-diff
 , aeson-options
 , aeson-pretty
 , async
@@ -16894,6 +16895,7 @@ license = stdenv.lib.licenses.mit;
 , cardano-sl-chain
 , cardano-sl-chain-test
 , cardano-sl-client
+, cardano-sl-cluster
 , cardano-sl-core
 , cardano-sl-core-test
 , cardano-sl-crypto
@@ -16901,12 +16903,10 @@ license = stdenv.lib.licenses.mit;
 , cardano-sl-infra
 , cardano-sl-mnemonic
 , cardano-sl-networking
-, cardano-sl-node
 , cardano-sl-node-ipc
 , cardano-sl-util
 , cardano-sl-util-test
 , cardano-sl-utxo
-, cardano-sl-x509
 , cereal
 , clock
 , conduit
@@ -16919,10 +16919,12 @@ license = stdenv.lib.licenses.mit;
 , filepath
 , foldl
 , formatting
+, generic-lens
 , generics-sop
 , hedgehog
 , hspec
 , hspec-core
+, hspec-expectations-lifted
 , http-api-data
 , http-client
 , http-types
@@ -16935,7 +16937,6 @@ license = stdenv.lib.licenses.mit;
 , neat-interpolation
 , normaldistribution
 , optparse-applicative
-, pretty-show
 , QuickCheck
 , quickcheck-instances
 , random
@@ -16948,7 +16949,6 @@ license = stdenv.lib.licenses.mit;
 , servant
 , servant-client
 , servant-client-core
-, servant-quickcheck
 , servant-server
 , servant-swagger
 , servant-swagger-ui
@@ -16968,7 +16968,6 @@ license = stdenv.lib.licenses.mit;
 , text
 , time
 , time-units
-, tls
 , transformers
 , universum
 , unliftio-core
@@ -16978,8 +16977,6 @@ license = stdenv.lib.licenses.mit;
 , wai
 , wai-middleware-throttle
 , warp
-, x509
-, x509-store
 , zlib
 }:
 mkDerivation {
@@ -16988,7 +16985,7 @@ pname = "cardano-wallet";
 version = "2.0.0";
 src = ./../wallet;
 configureFlags = [
-"--ghc-option=-fwarn-redundant-constraints"
+"--ghc-option=-fno-warn-redundant-constraints"
 "--ghc-option=-Wall"
 "--ghc-option=-Wcompat"
 "--ghc-option=-Werror"
@@ -17021,11 +17018,9 @@ cardano-sl-db
 cardano-sl-infra
 cardano-sl-mnemonic
 cardano-sl-networking
-cardano-sl-node
 cardano-sl-node-ipc
 cardano-sl-util
 cardano-sl-utxo
-cardano-sl-x509
 cereal
 clock
 conduit
@@ -17075,7 +17070,6 @@ tar
 text
 time
 time-units
-tls
 transformers
 universum
 unliftio-core
@@ -17085,44 +17079,18 @@ vector
 wai
 wai-middleware-throttle
 warp
-x509
 zlib
 ];
 executableHaskellDepends = [
 aeson
-aeson-diff
-aeson-pretty
-async
 base
 bytestring
 cardano-sl
 cardano-sl-chain
-cardano-sl-core
-cardano-sl-crypto
-cardano-sl-mnemonic
-cardano-sl-node
 cardano-sl-util
-containers
-exceptions
-formatting
-hspec
-http-client
-http-types
-lens
-memory
-mtl
 optparse-applicative
-pretty-show
-QuickCheck
-serokell-util
-servant
-servant-client
-servant-quickcheck
-servant-server
 swagger2
-text
 universum
-x509-store
 ];
 testHaskellDepends = [
 acid-state
@@ -17136,6 +17104,7 @@ cardano-sl-binary
 cardano-sl-chain
 cardano-sl-chain-test
 cardano-sl-client
+cardano-sl-cluster
 cardano-sl-core
 cardano-sl-core-test
 cardano-sl-crypto
@@ -17151,14 +17120,18 @@ containers
 cryptonite
 data-default
 directory
+filepath
 formatting
+generic-lens
 hedgehog
 hspec
 hspec-core
+hspec-expectations-lifted
 insert-ordered-containers
 lens
 mtl
 normaldistribution
+optparse-applicative
 QuickCheck
 quickcheck-instances
 random
