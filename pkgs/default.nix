@@ -16251,6 +16251,7 @@ license = stdenv.lib.licenses.mit;
 , text
 , time
 , transformers
+, turtle
 , universum
 , unix
 , unordered-containers
@@ -16297,6 +16298,7 @@ stm
 text
 time
 transformers
+turtle
 universum
 unix
 unordered-containers
